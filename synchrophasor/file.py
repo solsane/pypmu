@@ -14,9 +14,19 @@ class DataFile(object):
     the send thread will transmit the data at the data rate. If the read function
     does not see new lines of data within the timeout period, it will stop"""
     ##TODO: Support for multiple class instances of PMU's for multiport streaming
-    def __init__(self, port, pmu, datFile, lstFile, timeout=10):
+    def __init__(self, pmu, datFile, lstFile, timeout=10):
+        if len(pmu) == 1:
+            self.data_rate = self.pmu.cfg2.get_data_rate()
+            self.multiport = False
+        else:
+            self.data_rate = self.pmu[0].get_data_rate()
+            self.multiport = True
+        if self.data_rate > 0:
+            self.delay = 1.0 / self.data_rate
+        else:
+            self.delay = -self.data_rate
+
         self.set_pmu(pmu)
-        self.set_ports(port)
         self.set_dat_file(datFile)
         self.set_lst_file(lstFile)
         self.get_col_indexes(lstFile)
@@ -25,12 +35,6 @@ class DataFile(object):
         self.buffer = True
         self.timeout = timeout
         self.buffer = Queue() ##TODO: multiple client support
-
-        self.data_rate = self.pmu.cfg2.get_data_rate()
-        if self.data_rate > 0:
-            self.delay = 1.0 / self.data_rate
-        else:
-            self.delay = -self.data_rate
 
     def run(self):
         """Starts the data reading/sending process."""
@@ -42,7 +46,7 @@ class DataFile(object):
 
         readThread.join()
         sendThread.join()
-        print("Main thread complete.")
+        logging.info("Main thread complete.")
 
     def read_data_file(self):
         """Reads a line of data from file provided. Starts send data function as a child
@@ -63,11 +67,13 @@ class DataFile(object):
             else:
                 self.buffer.put(line)
                 index += 1
-        print("read thread complete.")
+        logging.info("read thread complete.")
 
     def send_data_file(self):
         """Child process of read_data_file. Uses column indexes and slice of data
         to construct and send a data frame."""
+
+        stat = [("ok", True, "timestamp", False, False, False, 0, "<10", 0)] * self.num_pmu
         while self.send:
             line = self.buffer.get()
             line = line.split()
@@ -80,32 +86,42 @@ class DataFile(object):
             alist2 = []
             phasors = []
             freq = []
-            stat = [("ok", True, "timestamp", False, False, False, 0, "<10", 0)] * self.num_pmu
 
-            if self.pmu.cfg2._multistreaming:
-                for k in range(self.num_pmu):
-                    if self.data_format[0]:##polar
-                        phasors.append((float(line[self.vmIndexes[k]]), float(line[self.amIndexes[k]])))
+            if multiport:
+                for pmu in self.pmu:
+                    if pmu.cfg2._multistreaming:
+                        for k in range(pmu.cfg2.get)
                     else:
-                        phasors.append((float(line[self.amIndexes[k]]), float(line[self.vmIndexes[k]])))
-                    freq.append(float(line[self.wBusFreqIndexes[k]]))
-                    print(freq)
-                for j in range(len(phasors)):
-                    alist = []
-                    alist.append(phasors[j])
-                    alist2.append(alist)
-                    alist = []
-                self.pmu.send_data(alist2, [[]]*14, [[]]*14, freq, [0]*14, stat)
+
+
+
+            """if self.pmu.cfg2._multistreaming:
+                    for k in range(self.num_p):##TODO add support for more than one phasor per pmu!
+                        if self.data_format[0]:##polar
+                            phasors.append((float(line[self.vmIndexes[k]]), float(line[self.amIndexes[k]])))
+                        else:
+                            phasors.append((float(line[self.amIndexes[k]]), float(line[self.vmIndexes[k]])))
+                        freq.append(float(line[self.wBusFreqIndexes[k]])*self.pmu.cfg2.get_fnom()[k])
+                    for j in range(len(phasors)):
+                        alist = []
+                        alist.append(phasors[j])
+                        alist2.append(alist)
+                        alist = []
+                    if self.pmu.cfg2._multistreaming:
+                        self.pmu.send_data(alist2, [[]]*14, [[]]*14, freq, [0]*14, stat)"""
+
                 sleep(self.delay)
             else:
                 if self.data_format[0]:
                     phasors = (float(line[self.vmIndexes[0]]), float(line[self.amIndexes[0]]))
                 else:
                     phasors = (float(line[self.amIndexes[0]]), (float(line[self.vmIndexes[0]])))
-                freq = line[self.wBusFreqIndexes[0]]
-                self.pmu.send_data(phasors, [], [], freq)
+                freq = float(line[self.wBusFreqIndexes[0]])
+                self.pmu.send_data(phasors, [], [], freq*self.pmu.cfg2.get_fnom())
                 sleep(self.delay)
-        print("Write thread complete.")
+        logging.info("Write thread complete.")
+
+
 
     def get_col_indexes(self, lstFile):
         """Using lst file, retrieves indexes of columns that corerspond to
@@ -133,13 +149,12 @@ class DataFile(object):
                 self.vmBusIndexes.append(i-1)
 
     def set_pmu(self, pmu):
-        self.pmu = pmu
-        self.num_pmu = pmu.cfg2.get_num_pmu()
-
-    def set_ports(self, ports):
-        self.ports = ports
-        if ports < self.num_pmu:
-            raise Exception("Cannot be more ports than PMU's")
+        if len(pmu) == 1:
+            self.pmu = pmu
+            self.num_pmu = pmu.cfg2.get_num_pmu()
+        else:
+            self.pmu = pmu
+            self.num_pmu = len(pmu)
 
     def set_dat_file(self, datFile):
         """datFile is a string with the name of the file in use."""

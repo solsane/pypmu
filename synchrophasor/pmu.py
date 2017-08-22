@@ -192,6 +192,7 @@ class Pmu(object):
         elif not self.cfg2.get_data_format()[2]:
             analog = map(lambda x: int(x / self.cfg2.get_analog_units()), analog)
         data_frame = DataFrame(self.cfg2.get_id_code(), stat, phasors, freq, dfreq, analog, digital, self.cfg2)
+        print("freq data frame: ", data_frame.get_freq())
 
         for buffer in self.client_buffers:
             buffer.put(data_frame)
@@ -240,6 +241,36 @@ class Pmu(object):
 
         while self.listener.is_alive():
             self.listener.join(0.5)
+
+    @staticmethod
+    def split_pmu(master_cfg, ips="127.0.0.1", ports = 1411):
+        """Not related to other split class. Instead of using multistreaming,
+        this method allows the creation of a seperate PMU stream for each PMU.
+        Returns a list of pmu objects."""
+        pmus = []
+        num_pmu = master_cfg.get_num_pmu()
+        cfgs = master_cfg.split_cfg()
+        ##splitting PMU's
+        if not master_cfg._multistreaming:
+            raise Exception("CFG should have more than one PMU")
+        #if only one IP is specified, uses the same IP for all.
+        if len(ips) == 1:
+            ips = [ips]*num_pmu
+        elif len(ips) != len(ports):
+            raise Exception("IP's should either be one IP or list of IP's corresponding to each PMU.")
+
+        if len(ports) == 1:
+            ports = range(ports, ports+num_pmu)
+        elif len(ports) != len(num_pmu):
+            raise Exception("Ports should be either one integer or a list of integers matching the number of PMU's")
+
+        for i in range(num_pmu):
+            pmus.append(Pmu(ips[i],ports[i]))
+            pmus[i].set_configuration(cfgs[i])
+            pmus[i].set_header()
+
+        return pmus
+
 
 
     @staticmethod

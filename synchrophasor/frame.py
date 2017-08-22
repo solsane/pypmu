@@ -1537,6 +1537,23 @@ class ConfigFrame1(CommonFrame):
 
         return self._data_rate
 
+    def split_cfg(self):
+        """Returns a list of cfg objects, converting a multistreaming cfg file into a list of
+        non multistreaming cfg files. If the config frame has only one pmu, it returns itself."""
+        if not self.is_multistreaming():
+            return self
+
+        pmu_ids = self.get_id_code()
+        cfg = []
+
+        for i in range(self.get_num_pmu()):
+            cfg.append(ConfigFrame2(pmu_ids[i], 1000000, 1, self.get_station_name()[i],
+                                    pmu_ids[i], self.get_data_format()[i], self.get_phasor_num()[i],
+                                    self.get_analog_num()[i], self.get_digital_num()[i], self.get_channel_names()[i],
+                                    self.get_ph_units()[i], self.get_analog_units()[i], self.get_digital_units()[i],
+                                    self.get_fnom()[i], self.get_cfg_count()[i], self.get_data_rate))
+        return cfg
+
 
     def convert2bytes(self):
 
@@ -2433,8 +2450,8 @@ class DataFrame(CommonFrame):
             data_format = DataFrame._int2format(data_format)
 
         if data_format[3]:  # FREQ/DFREQ floating point
-            if not -32.767 <= freq <= 32.767:
-                raise ValueError("FREQ must be in range -32.767 <= FREQ <= 32.767.")
+            #if not -32.767 <= freq <= 32.767:
+                #raise ValueError("FREQ must be in range -32.767 <= FREQ <= 32.767.")
 
             freq = unpack("!I", pack("!f", float(freq)))[0]
         else:
