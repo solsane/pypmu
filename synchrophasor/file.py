@@ -87,13 +87,28 @@ class DataFile(object):
             phasors = []
             freq = []
 
-            if multiport:
+            if multiport: ##each pmu is running on an individual port
                 for pmu in self.pmu:
                     if pmu.cfg2._multistreaming:
-                        for k in range(pmu.cfg2.get)
+                        for k in range(pmu.cfg2.get_num_pmu()):
+                            if self.data_format[0]:##polar
+                                phasors.append((float(line[self.vmIndexes[k]]), float(line[self.amIndexes[k]])))
+                            else:
+                                phasors.append((float(line[self.amIndexes[k]]), float(line[self.vmIndexes[k]])))
+                            freq.append(float(line[self.wBusFreqIndexes[k]])*self.pmu.cfg2.get_fnom()[k])
+
+                        for j in range(len(phasors)):
+                            alist = []
+                            alist.append(phasors[j])
+                            alist2.append(alist)
+                            alist = []
+
+                        self.pmu.send_data(alist2, [[]]*14, [[]]*14, freq, [0]*14, stat)
+                        sleep(self.delay)
                     else:
 
 
+            elif self.pmu.cfg2_multistreaming: ##one Pmu class object with multistreaming
 
             """if self.pmu.cfg2._multistreaming:
                     for k in range(self.num_p):##TODO add support for more than one phasor per pmu!
