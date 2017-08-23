@@ -254,21 +254,26 @@ class Pmu(object):
         if not master_cfg._multistreaming:
             raise Exception("CFG should have more than one PMU")
         #if only one IP is specified, uses the same IP for all.
-        if len(ips) == 1:
+        if type(ips) is str:
             ips = [ips]*num_pmu
-        elif len(ips) != len(ports):
-            raise Exception("IP's should either be one IP or list of IP's corresponding to each PMU.")
 
-        if len(ports) == 1:
-            ports = range(ports, ports+num_pmu)
-        elif len(ports) != len(num_pmu):
+        if type(ports) is int:
+            temp = []
+            for i in range(ports, ports+num_pmu):##Workaround for new python3 return type of range
+                temp.append(i)
+            ports = temp
+            print(ports)
+        elif len(ports) != num_pmu:
             raise Exception("Ports should be either one integer or a list of integers matching the number of PMU's")
 
+        if len(ips) != len(ports):
+            raise Exception("IP's should either be one IP or list of IP's corresponding to each PMU.")
+
         for i in range(num_pmu):
-            pmus.append(Pmu(ips[i],ports[i]))
+            pmus.append(Pmu(pmu_id=cfgs[i].get_id_code(),data_rate=cfgs[i].get_data_rate(),
+                            ip=ips[i],port=ports[i]))
             pmus[i].set_configuration(cfgs[i])
             pmus[i].set_header()
-
         return pmus
 
 

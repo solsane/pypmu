@@ -37,6 +37,7 @@ if __name__ == "__main__":
 
 
     pmu_list = Pmu.split_pmu(cfg)
+    print("PMU list done")
 
     data_file = DataFile(1411,pmu_list,"ieee14_vsc_wtg_out.dat", "ieee14_vsc_wtg_out.lst")
 

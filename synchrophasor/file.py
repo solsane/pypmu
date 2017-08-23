@@ -15,7 +15,7 @@ class DataFile(object):
     does not see new lines of data within the timeout period, it will stop"""
     ##TODO: Support for multiple class instances of PMU's for multiport streaming
     def __init__(self, pmu, datFile, lstFile, timeout=10):
-        if len(pmu) == 1:
+        if type(pmu) is not list:
             self.data_rate = self.pmu.cfg2.get_data_rate()
             self.multiport = False
         else:
@@ -87,7 +87,7 @@ class DataFile(object):
             phasors = []
             freq = []
 
-            if multiport: ##each pmu is running on an individual port
+            if self.multiport: ##each pmu is running on an individual port
                 for pmu in self.pmu:
                     if pmu.cfg2._multistreaming:
                         for k in range(pmu.cfg2.get_num_pmu()):
@@ -106,24 +106,29 @@ class DataFile(object):
                         self.pmu.send_data(alist2, [[]]*14, [[]]*14, freq, [0]*14, stat)
                         sleep(self.delay)
                     else:
-
+                        if self.data_format[0]:
+                            phasors = (float(line[self.vmIndexes[0]]), float(line[self.amIndexes[0]]))
+                        else:
+                            phasors = (float(line[self.amIndexes[0]]), (float(line[self.vmIndexes[0]])))
+                        freq = float(line[self.wBusFreqIndexes[0]])
+                        self.pmu.send_data(phasors, [], [], freq*self.pmu.cfg2.get_fnom())
+                        sleep(self.delay)
 
             elif self.pmu.cfg2_multistreaming: ##one Pmu class object with multistreaming
 
-            """if self.pmu.cfg2._multistreaming:
-                    for k in range(self.num_p):##TODO add support for more than one phasor per pmu!
-                        if self.data_format[0]:##polar
-                            phasors.append((float(line[self.vmIndexes[k]]), float(line[self.amIndexes[k]])))
-                        else:
-                            phasors.append((float(line[self.amIndexes[k]]), float(line[self.vmIndexes[k]])))
-                        freq.append(float(line[self.wBusFreqIndexes[k]])*self.pmu.cfg2.get_fnom()[k])
-                    for j in range(len(phasors)):
-                        alist = []
-                        alist.append(phasors[j])
-                        alist2.append(alist)
-                        alist = []
-                    if self.pmu.cfg2._multistreaming:
-                        self.pmu.send_data(alist2, [[]]*14, [[]]*14, freq, [0]*14, stat)"""
+                for k in range(self.pmu.cfg2.get_num_pmu()):
+                    if self.data_format[0]:##polar
+                        phasors.append((float(line[self.vmIndexes[k]]), float(line[self.amIndexes[k]])))
+                    else:
+                        phasors.append((float(line[self.amIndexes[k]]), float(line[self.vmIndexes[k]])))
+                    freq.append(float(line[self.wBusFreqIndexes[k]])*self.pmu.cfg2.get_fnom()[k])
+                for j in range(len(phasors)):
+                    alist = []
+                    alist.append(phasors[j])
+                    alist2.append(alist)
+                    alist = []
+
+                self.pmu.send_data(alist2, [[]]*14, [[]]*14, freq, [0]*14, stat)
 
                 sleep(self.delay)
             else:
