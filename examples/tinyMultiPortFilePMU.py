@@ -12,8 +12,8 @@ be sent.
 
 if __name__ == "__main__":
 ##TODO: support for non-multistreaming here. Also, replace hard coding with actual values from file.
-    pmu = Pmu(ip="127.0.0.1", port=1411)
-    pmu.logger.setLevel("DEBUG")
+
+
 
     station_names =  ["Station A", "Station B", "Station C", "Station D", "Station E", "Station F", "Station G", "Station H", "Station I", "Station J",
                                                            "Station K", "Station L", "Station M", "Station N"]
@@ -37,9 +37,11 @@ if __name__ == "__main__":
 
 
     pmu_list = Pmu.split_pmu(cfg)
+    print("pmu list", pmu_list)
+
     print("PMU list done")
 
-    data_file = DataFile(1411,pmu_list,"ieee14_vsc_wtg_out.dat", "ieee14_vsc_wtg_out.lst")
+    data_file = DataFile(pmu_list,"ieee14_vsc_wtg_out.dat", "ieee14_vsc_wtg_out.lst")
 
     for pmu in pmu_list:
         pmu.run()

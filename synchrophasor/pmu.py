@@ -274,6 +274,7 @@ class Pmu(object):
                             ip=ips[i],port=ports[i]))
             pmus[i].set_configuration(cfgs[i])
             pmus[i].set_header()
+        print(pmus, "pmu's in PMU split pmu")
         return pmus
 
 

@@ -16,10 +16,10 @@ class DataFile(object):
     ##TODO: Support for multiple class instances of PMU's for multiport streaming
     def __init__(self, pmu, datFile, lstFile, timeout=10):
         if type(pmu) is not list:
-            self.data_rate = self.pmu.cfg2.get_data_rate()
+            self.data_rate = pmu.cfg2.get_data_rate()
             self.multiport = False
         else:
-            self.data_rate = self.pmu[0].get_data_rate()
+            self.data_rate = pmu[0].cfg2.get_data_rate()
             self.multiport = True
         if self.data_rate > 0:
             self.delay = 1.0 / self.data_rate
@@ -30,7 +30,10 @@ class DataFile(object):
         self.set_dat_file(datFile)
         self.set_lst_file(lstFile)
         self.get_col_indexes(lstFile)
-        self.data_format = self.pmu.cfg2.get_data_format()
+        if not self.multiport:
+            self.data_format = pmu.cfg2.get_data_format()
+        else:
+            self.data_format = pmu[0].cfg2.get_data_format()
         self.send = False
         self.buffer = True
         self.timeout = timeout
@@ -103,15 +106,15 @@ class DataFile(object):
                             alist2.append(alist)
                             alist = []
 
-                        self.pmu.send_data(alist2, [[]]*14, [[]]*14, freq, [0]*14, stat)
+                        pmu.send_data(alist2, [[]]*14, [[]]*14, freq, [0]*14, stat)
                         sleep(self.delay)
                     else:
                         if self.data_format[0]:
-                            phasors = (float(line[self.vmIndexes[0]]), float(line[self.amIndexes[0]]))
+                            phasors = [(float(line[self.vmIndexes[0]]), float(line[self.amIndexes[0]]))]
                         else:
-                            phasors = (float(line[self.amIndexes[0]]), (float(line[self.vmIndexes[0]])))
+                            phasors = [(float(line[self.amIndexes[0]]), (float(line[self.vmIndexes[0]])))]
                         freq = float(line[self.wBusFreqIndexes[0]])
-                        self.pmu.send_data(phasors, [], [], freq*self.pmu.cfg2.get_fnom())
+                        pmu.send_data(phasors, [], [], freq*pmu.cfg2.get_fnom())
                         sleep(self.delay)
 
             elif self.pmu.cfg2_multistreaming: ##one Pmu class object with multistreaming
